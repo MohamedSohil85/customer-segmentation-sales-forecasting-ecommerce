@@ -4,10 +4,10 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class CustomerSegmentationAndSalesForecastingForECommerceApplication {
+public class CustomerSegmentationForecastingApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(CustomerSegmentationAndSalesForecastingForECommerceApplication.class, args);
+        SpringApplication.run(CustomerSegmentationForecastingApplication.class, args);
     }
 
 }
