@@ -22,7 +22,7 @@ public class CustomerIntelligence implements Serializable {
     // RFM Metrics
     private Integer recency;
     private Integer totalOrders;
-    private BigDecimal monetary;
+    private BigDecimal monetary; //total amount
     private BigDecimal avgOrderValue;
     private Integer rScore;
     private Integer fScore;

@@ -9,6 +9,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -21,11 +22,11 @@ public class CustomerSegmentation {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
-    private String Customer_ID;
+    private String CustomerID;
     private String segmentName;
     private Integer segmentScore;
     private String churnRiskLevel;
     private String engagementLevel;
     private String customerValueLabel;
-    private LocalDateTime segmentationDate;
+    private LocalDate segmentationDate;
 }
