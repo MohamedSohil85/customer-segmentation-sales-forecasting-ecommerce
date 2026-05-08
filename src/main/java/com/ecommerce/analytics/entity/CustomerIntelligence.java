@@ -31,7 +31,7 @@ public class CustomerIntelligence implements Serializable {
     // Engagement
     private BigDecimal avgSessionDuration;
     private BigDecimal avgPagesViewed;
-    private BigDecimal engagementScore;
+    private double engagementScore;
     private LocalDate lastActivityDate;
     private Integer inactivityDays;
 

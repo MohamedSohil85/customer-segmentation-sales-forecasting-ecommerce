@@ -1,9 +1,13 @@
 package com.ecommerce.analytics.persistence;
 
+import com.ecommerce.analytics.Projection.CustomerAnalyticsView;
+import com.ecommerce.analytics.Projection.CustomerSegmentAnalytics;
 import com.ecommerce.analytics.entity.CustomerSegmentation;
+import com.ecommerce.analytics.service.CustomerSegmentationService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
@@ -16,182 +20,74 @@ import java.util.List;
 @Repository
 public interface CustomerSegmentationRepository extends JpaRepository<CustomerSegmentation, Long> {
 
-    // =========================================
-    // 🔹 BASIC
-    // =========================================
+    @Query(value = """
+    WITH bounds AS (
+        SELECT MIN(o.date) AS startDate, MAX(o.date) AS endDate
+        FROM ecommerce_dataset o
+    )
 
-    Page<CustomerSegmentation> findTopByCustomerID(Pageable pageable);
-    List<CustomerSegmentation> findByCustomerID(String customer_id);
+    SELECT
+        t.*,
 
-    // =========================================
-    // 🔹 SEGMENT NAME
-    // =========================================
+        CASE
+            WHEN t.recency <= 30 THEN 3
+            WHEN t.recency <= 60 THEN 2
+            ELSE 1
+        END AS rScore,
 
-    List<CustomerSegmentation> findBySegmentName(String segmentName);
+        CASE
+            WHEN t.totalOrders >= 5 THEN 3
+            WHEN t.totalOrders >= 2 THEN 2
+            ELSE 1
+        END AS fScore,
 
-    Page<CustomerSegmentation> findBySegmentName(String segmentName, Pageable pageable);
+        CASE
+            WHEN t.monetary >= 500 THEN 3
+            WHEN t.monetary >= 200 THEN 2
+            ELSE 1
+        END AS mScore
 
-    List<CustomerSegmentation> findBySegmentNameIn(List<String> segments);
+    FROM (
+        SELECT
+            COUNT(o.order_id) AS totalOrders,
+            o.customer_id AS customerID,
+            SUM(o.total_amount) AS monetary,
+            AVG(o.total_amount) AS avgOrderValue,
+            MAX(b.endDate) - MAX(o.date) AS recency,
+            MAX(b.endDate) - MIN(o.date) AS customerTenureDays,
 
-    // =========================================
-    // 🔹 SEGMENT SCORE
-    // =========================================
+            AVG(o.session_duration_minutes) AS avgSessionDuration,
+            AVG(o.pages_viewed) AS avgPagesViewed,
 
-    List<CustomerSegmentation> findBySegmentScoreGreaterThan(Integer score);
+            AVG(
+                (o.session_duration_minutes / 120.0) * 0.4 +
+                (o.pages_viewed / 50.0) * 0.6
+            ) * 100 AS engagementScore,
 
-    List<CustomerSegmentation> findBySegmentScoreBetween(Integer min, Integer max);
+            AVG(o.customer_rating) AS avgRating,
+            MAX(o.date) AS lastActivityDate,
 
-    List<CustomerSegmentation> findTop10ByOrderBySegmentScoreDesc();
+            CASE
+                WHEN COUNT(o.order_id) > 1 THEN TRUE
+                ELSE FALSE
+            END AS isReturningCustomer
 
-    // =========================================
-    // 🔹 CHURN RISK
-    // =========================================
+        FROM ecommerce_dataset o
+        CROSS JOIN bounds b
+        GROUP BY o.customer_id
+    ) t
 
-    List<CustomerSegmentation> findByChurnRiskLevel(String level);
-    List<CustomerSegmentation> findByChurnRiskLevelIn(List<String> levels);
-
-    // High risk customers
-    @Query("""
-        SELECT c FROM CustomerSegmentation c
-        WHERE c.churnRiskLevel = 'HIGH'
-    """)
-    List<CustomerSegmentation> findHighRiskCustomers();
-    // =========================================
-    // 🔹 ENGAGEMENT
-    // =========================================
-
-    List<CustomerSegmentation> findByEngagementLevel(String level);
-
-    List<CustomerSegmentation> findByEngagementLevelIn(List<String> levels);
-
-    @Query("""
-        SELECT c FROM CustomerSegmentation c
-        WHERE c.engagementLevel = 'LOW'
-    """)
-    List<CustomerSegmentation> findLowEngagementCustomers();
-
-    // =========================================
-    // 🔹 CUSTOMER VALUE
-    // =========================================
-
-    List<CustomerSegmentation> findByCustomerValueLabel(String label);
-    List<CustomerSegmentation> findByCustomerValueLabelIn(List<String> labels);
-
-    // =========================================
-    // 🔹 COMBINED SEGMENTATION (IMPORTANT)
-    // =========================================
-
-    // High value + low engagement (Upsell opportunity)
-    @Query("""
-        SELECT c FROM CustomerSegmentation c
-        WHERE c.customerValueLabel = 'High'
-        AND c.engagementLevel = 'LOW'
-    """)
-    List<CustomerSegmentation> findHighValueLowEngagement();
-
-    // High churn risk + high value (Critical segment)
-    @Query("""
-        SELECT c FROM CustomerSegmentation c
-        WHERE c.customerValueLabel = 'High'
-        AND c.churnRiskLevel = 'HIGH'
-    """)
-    List<CustomerSegmentation> findHighValueHighRisk();
-
-    // Loyal customers
-    @Query("""
-        SELECT c FROM CustomerSegmentation c
-        WHERE c.engagementLevel = 'HIGH'
-        AND c.churnRiskLevel = 'LOW'
-    """)
-    List<CustomerSegmentation> findLoyalCustomers();
-
-    // =========================================
-    // 🔹 DATE FILTERING
-    // =========================================
-
-    List<CustomerSegmentation> findBySegmentationDate(LocalDate segmentationDate);
-
-    List<CustomerSegmentation> findBySegmentationDateBetween(
-            LocalDate start,
-            LocalDate end
-    );
-
-    List<CustomerSegmentation> findTop10ByOrderBySegmentationDateDesc();
-
-    // Latest segmentation per customer
-    @Query("""
-        SELECT c FROM CustomerSegmentation c
-        WHERE c.segmentationDate = (
-            SELECT MAX(c2.segmentationDate)
-            FROM CustomerSegmentation c2
-            WHERE c2.CustomerID = c.CustomerID
-        )
-    """)
-    List<CustomerSegmentation> findLatestSegmentationPerCustomer();
-
-    // =========================================
-    // 🔹 DASHBOARD / ANALYTICS
-    // =========================================
-
-    // Count by segment
-    @Query("""
-        SELECT c.segmentName, COUNT(c)
-        FROM CustomerSegmentation c
-        GROUP BY c.segmentName
-    """)
-    List<Object[]> countBySegment();
-
-    // Count by churn risk
-    @Query("""
-        SELECT c.churnRiskLevel, COUNT(c)
-        FROM CustomerSegmentation c
-        GROUP BY c.churnRiskLevel
-    """)
-    List<Object[]> countByChurnRisk();
-
-    // Count by engagement
-    @Query("""
-        SELECT c.engagementLevel, COUNT(c)
-        FROM CustomerSegmentation c
-        GROUP BY c.engagementLevel
-    """)
-    List<Object[]> countByEngagement();
-
-    // Count by value
-    @Query("""
-        SELECT c.customerValueLabel, COUNT(c)
-        FROM CustomerSegmentation c
-        GROUP BY c.customerValueLabel
-    """)
-    List<Object[]> countByCustomerValue();
-
-    // =========================================
-    // 🔹 ADVANCED ANALYTICS
-    // =========================================
-
-    // Average segment score
-    @Query("SELECT AVG(c.segmentScore) FROM CustomerSegmentation c")
-    Double getAverageSegmentScore();
-
-    // Max segment score
-    @Query("SELECT MAX(c.segmentScore) FROM CustomerSegmentation c")
-    Integer getMaxSegmentScore();
-
-    // Min segment score
-    @Query("SELECT MIN(c.segmentScore) FROM CustomerSegmentation c")
-    Integer getMinSegmentScore();
-
-    // =========================================
-    // 🔹 PAGINATION FILTERS
-    // =========================================
-
-    Page<CustomerSegmentation> findByChurnRiskLevel(
-            String level, Pageable pageable);
-
-    Page<CustomerSegmentation> findByEngagementLevel(
-            String level, Pageable pageable);
-
-    Page<CustomerSegmentation> findByCustomerValueLabel(
-            String label, Pageable pageable);
-
+    ORDER BY t.customerID
+    """, nativeQuery = true)
+    List<CustomerSegmentAnalytics>findAllCustomerSegmentations(Pageable pageable);
+    Page<CustomerSegmentation>findBySegmentNameIgnoreCase(Pageable pageable, String segmentName);
+    List<CustomerSegmentation>findTopByOrderBySegmentScoreDesc(Pageable pageable);
+    List<CustomerSegmentation>findCustomerSegmentationByChurnRiskLevel(String level);
+    List<CustomerSegmentation>findCustomerSegmentationBySegmentScoreGreaterThan(Integer score);
+    List<CustomerSegmentation>findCustomerSegmentationByCustomerValueLabel(String level);
+    @Query(value = "DELETE FROM customer_segmentation",nativeQuery = true)
+    @Modifying
+    void deleteCustomerSegmentation();
+    List<CustomerSegmentation>findCustomerSegmentationByEngagementLevel(Pageable pageable, String engagementLevel);
+    List<CustomerSegmentation>findCustomerSegmentationBySegmentationDateBetween(LocalDate startDate, LocalDate endDate);
 }
