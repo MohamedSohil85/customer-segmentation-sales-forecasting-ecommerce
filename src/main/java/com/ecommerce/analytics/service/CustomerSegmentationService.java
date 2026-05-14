@@ -27,11 +27,11 @@ import java.util.stream.Collectors;
 public class CustomerSegmentationService {
 
     private final CustomerSegmentationRepository segmentationRepository;
-    private final CustomerIntelligenceRepository inteligenceRepository;
+    private final CustomerIntelligenceRepository intelligenceRepository;
 
     public CustomerSegmentationService(CustomerSegmentationRepository segmentationRepository, CustomerIntelligenceRepository inteligenceRepository) {
         this.segmentationRepository = segmentationRepository;
-        this.inteligenceRepository = inteligenceRepository;
+        this.intelligenceRepository = inteligenceRepository;
     }
 
     public List<CustomerSegmentAnalytics> getAllCustomerSegmentations(int page, int size) {
@@ -43,7 +43,7 @@ public class CustomerSegmentationService {
     @Transactional
     public List<CustomerSegmentation> saveAllCustomerSegmentations() {
 
-        List<CustomerIntelligence> customerIntelligences = inteligenceRepository.findAll();
+        List<CustomerIntelligence> customerIntelligences = intelligenceRepository.findAll();
         List<CustomerSegmentation> customerSegmentationList = new ArrayList<>();
 
         for (CustomerIntelligence customerIntelligence : customerIntelligences) {
@@ -54,7 +54,7 @@ public class CustomerSegmentationService {
             customerSegmentation.setChurnRiskLevel(calculateChurnRisk(customerIntelligence));
             customerSegmentation.setEngagementLevel(calculateEngagementLevel(customerIntelligence));
             customerSegmentation.setCustomerValueLabel(calculateValueTier(customerIntelligence));
-            customerSegmentation.setSegmentationDate(LocalDate.now());
+
             customerSegmentationList.add(customerSegmentation);
         }
         segmentationRepository.deleteCustomerSegmentation();
@@ -286,22 +286,7 @@ public class CustomerSegmentationService {
         // DATE FILTERING
         // =========================================
 
-        // Retrieves segmentation records for a specific date.
-        // Returns: List<CustomerSegmentation>
-        // Method: findBySegmentationDate(LocalDate)
-        public Map<LocalDate,List<CustomerSegmentation>>findBySegmentationDate(LocalDate segmentationDate) {
-        List<CustomerSegmentation>customerSegmentations = segmentationRepository.findAll().stream()
-                .filter(customerSegmentation -> customerSegmentation.getSegmentationDate().equals(segmentationDate))
-                .toList();
-        return Map.of(segmentationDate, customerSegmentations);
-        }
-        // Retrieves segmentation records within a date range.
-        // Returns: List<CustomerSegmentation>
-        // Method: findBySegmentationDateBetween(LocalDate, LocalDate)
-        public List<CustomerSegmentation>findBySegmentationDateBetween(LocalDate startDate, LocalDate endDate) {
 
-            return segmentationRepository.findCustomerSegmentationBySegmentationDateBetween(startDate, endDate);
-        }
 
 
         // =========================================

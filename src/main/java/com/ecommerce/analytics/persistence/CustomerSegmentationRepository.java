@@ -89,5 +89,4 @@ public interface CustomerSegmentationRepository extends JpaRepository<CustomerSe
     @Modifying
     void deleteCustomerSegmentation();
     List<CustomerSegmentation>findCustomerSegmentationByEngagementLevel(Pageable pageable, String engagementLevel);
-    List<CustomerSegmentation>findCustomerSegmentationBySegmentationDateBetween(LocalDate startDate, LocalDate endDate);
 }

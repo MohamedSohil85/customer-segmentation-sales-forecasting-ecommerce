@@ -2,7 +2,9 @@ package com.ecommerce.analytics.controller;
 
 import com.ecommerce.analytics.Projection.PeakSalesView;
 import com.ecommerce.analytics.Projection.SalesAnalyticsView;
+import com.ecommerce.analytics.Projection.SalesDashboardView;
 import com.ecommerce.analytics.Projection.SeasonalSalesAnalyticsView;
+import com.ecommerce.analytics.entity.EcommerceDataset;
 import com.ecommerce.analytics.entity.Sales;
 import com.ecommerce.analytics.service.SalesService;
 import org.springframework.http.HttpStatus;
@@ -16,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api")
@@ -41,7 +44,7 @@ public class SalesResource {
             @RequestParam LocalDate startDate,
             @RequestParam LocalDate endDate) {
 
-        return ResponseEntity.ok(salesService.findTopSalesByDate(startDate, endDate));
+        return ResponseEntity.ok(salesService.findCategorySalesTrend(startDate, endDate));
     }
 
     @GetMapping(value = "/sales-peak", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -61,5 +64,12 @@ public class SalesResource {
         return new ResponseEntity<>(salesService.findPeakSalesMonths(startDate, endDate), HttpStatus.OK);
 
     }
-
+    @GetMapping(value = "/best-worst-month",produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Map<String, EcommerceDataset>> getBestWorstSalesMonth(@RequestParam LocalDate startDate, @RequestParam LocalDate endDate) {
+        return new ResponseEntity<>(salesService.findBestAndWorstDay(startDate,endDate),HttpStatus.OK);
+    }
+   @GetMapping(value = "/sales-overview",produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Map<String, SalesDashboardView>>getSalesOverview(@RequestParam LocalDate startDate, @RequestParam LocalDate endDate) {
+        return new ResponseEntity<>(salesService.getYearlySalesOverview(startDate, endDate), HttpStatus.OK);
+   }
 }

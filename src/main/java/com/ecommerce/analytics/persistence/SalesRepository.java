@@ -1,5 +1,6 @@
 package com.ecommerce.analytics.persistence;
 
+import com.ecommerce.analytics.Projection.BestCustomerView;
 import com.ecommerce.analytics.Projection.PeakSalesView;
 import com.ecommerce.analytics.Projection.SalesAnalyticsView;
 import com.ecommerce.analytics.Projection.SeasonalSalesAnalyticsView;
@@ -39,11 +40,9 @@ public interface SalesRepository extends JpaRepository<Sales,Long> {
             EXTRACT(YEAR FROM date),
             EXTRACT(MONTH FROM date)
         ORDER BY
-            category,
-            year,
-            month
+            month,year,sum(total_amount) DESC
         """, nativeQuery = true)
-    List<SalesAnalyticsView> findTopCategoryBySalesByDate(
+    List<SalesAnalyticsView> findCategorySalesTrend(
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate
     );
@@ -213,15 +212,23 @@ public interface SalesRepository extends JpaRepository<Sales,Long> {
    @Query(value = "SELECT * from ecommerce_dataset where date between :startDate and :endDate",nativeQuery = true)
     List<EcommerceDataset> findEcommerceDataset(@Param("startDate")LocalDate startDate,@Param("endDate")LocalDate endDate);
 
+
+
+    //
     @Query(value = """
     SELECT
-        to_char(date,'Month') AS monthName,
-        to_char(date,'Day') AS dayName,
-        SUM(total_amount) AS totalSales
+        customer_id AS customerId,
+        SUM(total_amount) AS totalSpent,
+        SUM(quantity) AS totalQuantity,
+        COUNT(order_id) AS totalOrders
     FROM ecommerce_dataset
     WHERE date BETWEEN :startDate AND :endDate
-    GROUP BY monthName, date
-    ORDER BY totalSales DESC
+    GROUP BY customer_id
+    ORDER BY totalSpent DESC
+    LIMIT 1
     """, nativeQuery = true)
-    List<PeakSalesView>findPeakSalesViewsMonthly(@Param("startDate")LocalDate startDate,@Param("endDate")LocalDate endDate);
+   public EcommerceDataset findBestCustomer(
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
+    );
 }

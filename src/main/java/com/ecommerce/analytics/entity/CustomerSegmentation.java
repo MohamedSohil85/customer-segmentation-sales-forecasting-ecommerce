@@ -29,5 +29,5 @@ public class CustomerSegmentation implements Serializable {
     private String churnRiskLevel;
     private String engagementLevel;
     private String customerValueLabel;
-    private LocalDate segmentationDate;
+
 }
